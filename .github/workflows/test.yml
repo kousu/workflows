@@ -1,0 +1,60 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-16.04, ubuntu-18.04, macos-latest]
+    runs-on: ${{ matrix.os }}
+    outputs:
+      t1: ${{ steps.names.outputs.artifact }}
+    steps:
+    # first, rewrite OS names to be safe for github artifacts.
+    - name: names
+      outputs:
+        - artifact
+      run: |
+        OS="${{ matrix.os }}"
+        OS=$(echo "$OS" | sed s/://)
+        echo "::set-output name=artifact::$OS"
+    - name: debug
+      run: |
+        set
+        echo ${{ steps.names.outputs.artifact }}
+        echo "???"
+
+  build-manylinuxes: # Github only supports Ubuntu natively; for other Linuxes, we need to use Docker
+    strategy:
+      matrix:
+        os: ['centos:7', 'centos:8', 'archlinux']
+    runs-on: ubuntu-latest
+    container: ${{ matrix.os }}
+    steps:
+    - name: names
+      run: |
+        OS="${{ matrix.os }}"
+        OS=$(echo "$OS" | sed s/://)
+        echo "::set-env name=ARTIFACT::$OS"
+    - name: DEBUG
+      run: |
+        set
+        echo ${{ toJSON(steps) }}
+        echo ${{ toJSON(steps.names.outputs.artifact }}
+        echo ${{ env.ARTIFACT }}
+
+  finaldebug:
+    needs: [build, build-manylinuxes]
+    runs-on: ubuntu-latest
+    steps:
+    - name: step1
+      run: |
+        set
+        echo ${{ toJSON(needs.build.outputs) }}
+        
